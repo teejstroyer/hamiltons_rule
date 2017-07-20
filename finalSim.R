@@ -1,19 +1,29 @@
+library(R6)
+
 Field <- R6Class(
   classname = "Field",
   public = list(
     relMat = NULL,
-    initialize = function(init=10){
+    initialize = function(init=5){
       self$relMat = diag(init)
     },   
-    reproduce = function(mat, x,y){
-      mat= cbind(mat,0) 
-      mat=rbind(mat,0)
-      mat[nrow(mat),]= (mat[x,]+mat[y,])/2 
-      mat[nrow(mat),ncol(mat)]=1
-      return(mat)
+    reproduce = function(x,y){
+      
+      #Add another Column and Row
+      self$relMat = cbind(self$relMat,0.0) 
+      self$relMat = rbind(self$relMat,0.0)
+      
+      n = ncol(self$relMat)
+      
+      #Create Child Row
+      self$relMat[n,] = ( self$relMat[x, ] + self$relMat[y, ] )/2 
+      self$relMat[n,n]=1.0
+      
+      #Add relationship to the rest of the tree
+      self$relMat[ ,n]= self$relMat[n, ]
     }
   )
 )
 
-relMat=reproduce(relMat,1,3)
-relMat=reproduce(relMat,2,4)
+FieldTest <- Field$new()
+print(FieldTest$relMat)
