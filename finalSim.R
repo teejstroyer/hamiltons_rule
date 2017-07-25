@@ -30,10 +30,16 @@ Field <- R6Class(
     },
     pickMates = function(){
       #k = carrying capacity
+      popsize=length(self$df$alive[self$df$alive == T])
+      
+      if(popsize >= self$k){
+        #population is at carrying compacity
+        return(NULL);
+      }
+      
       vMales=self$df[self$df$sex == 'M' & self$df$age >= self$maturity & self$df$alive == T,]
       vFeMales=self$df[self$df$sex == 'F' & self$df$age >= self$maturity & self$df$alive == T,]
       
-      popsize=length(self$df$alive[self$df$alive == T])
       nf = ceiling((self$k-popsize)/self$litter)
       
       af=min(nf,length(vFeMales$id))
@@ -69,15 +75,30 @@ Field <- R6Class(
       temp=list(n,sample(c('M','F'),1) , 0, geneM, geneF, T, T)
       
       self$df=rbind(self$df,temp)
+    },
+    stepUp = function(){
+      self$df$age[self$df$alive == T] = self$df$age[self$df$alive == T] + 1  
     }
   )
 )
-fieldSim <- function(){
-  FieldTest <- Field$new(mature=0, k=50)
-  pairs=FieldTest$pickMates()
-  FieldTest$df$age =FieldTest$df$age+1 
-  Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
-  View(FieldTest$df)
-  print(FieldTest$relMat)
-  return(FieldTest)
+fieldSim <- function(reps=5){
+  FieldTest <- Field$new(mature=0, k=51)
+  FieldTest$stepUp()
+  for(i in 1:reps){
+    #summary function
+    
+    #Reproduction Phase
+    pairs=FieldTest$pickMates()
+    if(!is.null(pairs)){
+      Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
+    }
+    
+    #
+    
+    
+    View(FieldTest$df)
+    print(FieldTest$relMat)
+    
+    FieldTest$stepUp()
+  }
 }
