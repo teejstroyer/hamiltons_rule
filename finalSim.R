@@ -1,4 +1,6 @@
 library(R6)
+library(ggplot2)
+library(reshape2)
 
 Field <- R6Class(
   classname = "Field",
@@ -8,6 +10,9 @@ Field <- R6Class(
     maturity = NULL,
     litter = NULL,
     k = NULL,
+    altPop = NULL,
+    naltPop = NULL,
+    recPop = NULL,
     initialize = function(naltM=2,naltF=2,altM=2,altF=2,mature=1,litter=3,k = 100){
       self$maturity = mature
       self$k = k
@@ -76,29 +81,54 @@ Field <- R6Class(
       
       self$df=rbind(self$df,temp)
     },
+    getPops = function(){
+      #get populations at every time step 
+      self$altPop=c( self$altPop,nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==1,]))
+      self$naltPop=c( self$naltPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==0,]))
+      self$recPop=c( self$recPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==1,])+
+                       nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==0,]))
+    },
     stepUp = function(){
       self$df$age[self$df$alive == T] = self$df$age[self$df$alive == T] + 1  
+    },
+    graphPops = function(){
+      pdf = data.frame(NAlt_Pop = self$naltPop, Alt_Pop=self$altPop, Rec_Pop=self$recPop,steps = seq(1:length(self$altPop)) ) 
+      
+      pdf_long <- melt(pdf, id="steps")  # convert to long format
+      
+      ggplot(data=pdf_long,
+             aes(x=steps, y=value, colour=variable)) + geom_line() 
+               
+    },
+    culling = function(age=3){
+      self$df$alive[self$df$age >= age]=F 
     }
   )
 )
-fieldSim <- function(reps=5){
-  FieldTest <- Field$new(mature=0, k=51)
+
+fieldSim <- function(reps=100){
+  FieldTest <- Field$new(mature=0, k=40)
   FieldTest$stepUp()
   for(i in 1:reps){
+    FieldTest$stepUp()
+    FieldTest$getPops()
     #summary function
+        
+    #populations
     
+    #kill elderly
+    FieldTest$culling()
     #Reproduction Phase
     pairs=FieldTest$pickMates()
     if(!is.null(pairs)){
       Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
     }
     
-    #
     
     
-    View(FieldTest$df)
-    print(FieldTest$relMat)
     
-    FieldTest$stepUp()
   }
+    View(FieldTest$df)
+    #print(FieldTest$relMat)
+  FieldTest$graphPops()
 }
