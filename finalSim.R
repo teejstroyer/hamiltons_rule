@@ -83,10 +83,10 @@ Field <- R6Class(
     },
     getPops = function(){
       #get populations at every time step 
-      self$altPop=c( self$altPop,nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==1,]))
-      self$naltPop=c( self$naltPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==0,]))
-      self$recPop=c( self$recPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==1,])+
-                       nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==0,]))
+      self$altPop=c( self$altPop,nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==1 & self$df$alive ==T,]))
+      self$naltPop=c( self$naltPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==0 & self$df$alive ==T,]))
+      self$recPop=c( self$recPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==1 & self$df$alive ==T,])+
+                       nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==0 & self$df$alive==T,]))
     },
     stepUp = function(){
       self$df$age[self$df$alive == T] = self$df$age[self$df$alive == T] + 1  
@@ -96,8 +96,7 @@ Field <- R6Class(
       
       pdf_long <- melt(pdf, id="steps")  # convert to long format
       
-      ggplot(data=pdf_long,
-             aes(x=steps, y=value, colour=variable)) + geom_line() 
+      ggplot(data=pdf_long, aes(x=steps, y=value, colour=variable)) + geom_line() 
                
     },
     culling = function(age=3){
@@ -123,12 +122,9 @@ fieldSim <- function(reps=100){
     if(!is.null(pairs)){
       Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
     }
-    
-    
-    
-    
   }
-    View(FieldTest$df)
-    #print(FieldTest$relMat)
+  
+  View(FieldTest$df)
+  #print(FieldTest$relMat)
   FieldTest$graphPops()
 }
