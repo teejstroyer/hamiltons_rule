@@ -1,5 +1,6 @@
 library(R6)
 library(ggplot2)
+library(data.table)
 library(reshape2)
 
 Field <- R6Class(
@@ -7,6 +8,7 @@ Field <- R6Class(
   public = list(
     relMat = NULL,
     df = NULL,#TODO add positionx and positiony , and lastbirth
+    dfSmall= NULL,
     maturity = NULL,
     litter = NULL,
     k = NULL,
@@ -29,21 +31,25 @@ Field <- R6Class(
       visiblityV=rep(T,times=n)
       aliveV=rep(T,times=n)
       
-      self$df=data.frame(id = 1:n, sex=sexV, age=ageV, gene_mom=gene_momV, 
+      self$df=data.table(id = 1:n, sex=sexV, age=ageV, gene_mom=gene_momV, 
               gene_dad=gene_dadV,visiblity=visiblityV, alive=aliveV )
       
     },
+    shrinkData = function(){
+      self$dfSmall = self$df[alive == T] 
+    },
     pickMates = function(){
       #k = carrying capacity
-      popsize=length(self$df$alive[self$df$alive == T])
-      
+      popsize=self$population()
+      cat ("popsize = ",popsize, " k = ",self$k,"\n")
       if(popsize >= self$k){
         #population is at carrying compacity
-        return(NULL);
+        cat("capacity met\n") 
+        return(NULL)
       }
       
-      vMales=self$df[self$df$sex == 'M' & self$df$age >= self$maturity & self$df$alive == T,]
-      vFeMales=self$df[self$df$sex == 'F' & self$df$age >= self$maturity & self$df$alive == T,]
+      vMales=self$dfSmall[self$dfSmall$sex == 'M' & self$dfSmall$age >= self$maturity,]
+      vFeMales=self$dfSmall[self$dfSmall$sex == 'F' & self$dfSmall$age >= self$maturity,]
       
       nf = ceiling((self$k-popsize)/self$litter)
       
@@ -83,10 +89,13 @@ Field <- R6Class(
     },
     getPops = function(){
       #get populations at every time step 
-      self$altPop=c( self$altPop,nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==1 & self$df$alive ==T,]))
-      self$naltPop=c( self$naltPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==0 & self$df$alive ==T,]))
-      self$recPop=c( self$recPop,nrow(self$df[self$df$gene_mom ==0 & self$df$gene_dad==1 & self$df$alive ==T,])+
-                       nrow(self$df[self$df$gene_mom ==1 & self$df$gene_dad==0 & self$df$alive==T,]))
+      self$altPop=c( self$altPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==1 & self$dfSmall$gene_dad==1,]))
+      self$naltPop=c( self$naltPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==0 & self$dfSmall$gene_dad==0,]))
+      self$recPop=c( self$recPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==0 & self$dfSmall$gene_dad==1,])+
+                       nrow(self$dfSmall[self$dfSmall$gene_mom ==1 & self$dfSmall$gene_dad==0,]))
+    },
+    population = function(){
+      return(nrow(self$dfSmall))
     },
     stepUp = function(){
       self$df$age[self$df$alive == T] = self$df$age[self$df$alive == T] + 1  
@@ -105,12 +114,16 @@ Field <- R6Class(
   )
 )
 
-fieldSim <- function(reps=100){
-  FieldTest <- Field$new(mature=0, k=40)
+fieldSim <- function(reps=100, k=NULL){
+  FieldTest <- Field$new(altM=10,altF=10,
+                         naltM=10,naltF=10,
+                         mature=0, k=k,
+                         litter=3)
   FieldTest$stepUp()
   for(i in 1:reps){
     FieldTest$stepUp()
     FieldTest$getPops()
+    FieldTest$shrinkData()
     #summary function
         
     #populations
@@ -124,7 +137,7 @@ fieldSim <- function(reps=100){
     }
   }
   
-  View(FieldTest$df)
+  #View(FieldTest$df)
   #print(FieldTest$relMat)
   FieldTest$graphPops()
 }
