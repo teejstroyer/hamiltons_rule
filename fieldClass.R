@@ -2,9 +2,11 @@ library(R6)
 library(ggplot2)
 library(data.table)
 library(reshape2)
+source("./eagleAttack.R")
 
 Field <- R6Class(
   classname = "Field",
+  portable = F,
   public = list(
     relMat = NULL,
     df = NULL,#TODO add positionx and positiony , and lastbirth
@@ -16,13 +18,13 @@ Field <- R6Class(
     naltPop = NULL,
     recPop = NULL,
     initialize = function(naltM=2,naltF=2,altM=2,altF=2,mature=1,litter=3,k = 100){
-      self$maturity = mature
-      self$k = k
-      self$litter = litter
+      maturity <<- mature
+      k <<- k
+      litter <<- litter
       
       n = naltM+naltF+altM+altF
       
-      self$relMat = diag(n)
+      relMat <<- diag(n)
       
       sexV=c(rep('M',times=altM),rep('F',times=altF),rep('M',times=naltM),rep('F',times=naltF))
       ageV=rep(0,times=n)
@@ -31,20 +33,19 @@ Field <- R6Class(
       visiblityV=rep(T,times=n)
       aliveV=rep(T,times=n)
       
-      self$df=data.table(id = 1:n, sex=sexV, age=ageV, gene_mom=gene_momV, 
+      df <<- data.table(id = 1:n, sex=sexV, age=ageV, gene_mom=gene_momV, 
               gene_dad=gene_dadV,visiblity=visiblityV, alive=aliveV )
       
     },
-    shrinkData = function(){
-      self$dfSmall = self$df[alive == T] 
+    shrinkData = function(df){
+      return(df[alive == T] )
     },
     pickMates = function(){
       #k = carrying capacity
       popsize=self$population()
-      cat ("popsize = ",popsize, " k = ",self$k,"\n")
+      
       if(popsize >= self$k){
         #population is at carrying compacity
-        cat("capacity met\n") 
         return(NULL)
       }
       
@@ -63,17 +64,17 @@ Field <- R6Class(
     reproduce = function(x,y,size=self$litter){
      for(i in 1:size){ 
        #Add another Column and Row
-       self$relMat = cbind(self$relMat,0.0) 
-       self$relMat = rbind(self$relMat,0.0)
+       relMat <<- cbind(self$relMat,0.0) 
+       relMat <<- rbind(self$relMat,0.0)
       
        n = ncol(self$relMat)
       
        #Create Child Row
-       self$relMat[n,] = ( self$relMat[x, ] + self$relMat[y, ] )/2 
-       self$relMat[n,n]=1.0
+       relMat[n,] <<- ( self$relMat[x, ] + self$relMat[y, ] )/2 
+       relMat[n,n] <<- 1.0
       
        #Add relationship to the rest of the tree
-       self$relMat[ ,n]= self$relMat[n, ]
+       relMat[ ,n] <<- self$relMat[n, ]
        
        #Add new critter to data frame
        self$storeDF(x,y,n)
@@ -85,20 +86,20 @@ Field <- R6Class(
       
       temp=list(n,sample(c('M','F'),1) , 0, geneM, geneF, T, T)
       
-      self$df=rbind(self$df,temp)
+      df <<- rbind(self$df,temp)
     },
-    getPops = function(){
+    getPops = function(df){
       #get populations at every time step 
-      self$altPop=c( self$altPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==1 & self$dfSmall$gene_dad==1,]))
-      self$naltPop=c( self$naltPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==0 & self$dfSmall$gene_dad==0,]))
-      self$recPop=c( self$recPop,nrow(self$dfSmall[self$dfSmall$gene_mom ==0 & self$dfSmall$gene_dad==1,])+
-                       nrow(self$dfSmall[self$dfSmall$gene_mom ==1 & self$dfSmall$gene_dad==0,]))
+      altPop  <<- c( self$altPop,nrow(df[df$gene_mom ==1 & df$gene_dad==1,]))
+      naltPop <<- c( self$naltPop,nrow(df[df$gene_mom ==0 & df$gene_dad==0,]))
+      recPop  <<- c( self$recPop,nrow(df[dfSmall$gene_mom ==0 & df$gene_dad==1,])+
+                       nrow(df[df$gene_mom ==1 & df$gene_dad==0,]))
     },
     population = function(){
       return(nrow(self$dfSmall))
     },
     stepUp = function(){
-      self$df$age[self$df$alive == T] = self$df$age[self$df$alive == T] + 1  
+      df$age[self$df$alive == T] <<- self$df$age[self$df$alive == T] + 1  
     },
     graphPops = function(){
       pdf = data.frame(NAlt_Pop = self$naltPop, Alt_Pop=self$altPop, Rec_Pop=self$recPop,steps = seq(1:length(self$altPop)) ) 
@@ -109,35 +110,9 @@ Field <- R6Class(
                
     },
     culling = function(age=3){
-      self$df$alive[self$df$age >= age]=F 
+      df$alive[self$df$age >= age] <<- F 
     }
   )
 )
 
-fieldSim <- function(reps=100, k=NULL){
-  FieldTest <- Field$new(altM=10,altF=10,
-                         naltM=10,naltF=10,
-                         mature=0, k=k,
-                         litter=3)
-  FieldTest$stepUp()
-  for(i in 1:reps){
-    FieldTest$stepUp()
-    FieldTest$getPops()
-    FieldTest$shrinkData()
-    #summary function
-        
-    #populations
-    
-    #kill elderly
-    FieldTest$culling()
-    #Reproduction Phase
-    pairs=FieldTest$pickMates()
-    if(!is.null(pairs)){
-      Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
-    }
-  }
-  
-  #View(FieldTest$df)
-  #print(FieldTest$relMat)
-  FieldTest$graphPops()
-}
+source("./eagleAttack.R")
