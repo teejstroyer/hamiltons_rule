@@ -10,13 +10,14 @@ Field <- R6Class(
   public = list(
     relMat = NULL,
     df = NULL,#TODO add positionx and positiony , and lastbirth
-    dfSmall= NULL,
     maturity = NULL,
     litter = NULL,
     k = NULL,
+    pop = NULL,
     altPop = NULL,
     naltPop = NULL,
     recPop = NULL,
+    curId = NULL,
     initialize = function(naltM=2,naltF=2,altM=2,altF=2,mature=1,litter=3,k = 100){
       maturity <<- mature
       k <<- k
@@ -26,31 +27,35 @@ Field <- R6Class(
       
       relMat <<- diag(n)
       
-      sexV=c(rep('M',times=altM),rep('F',times=altF),rep('M',times=naltM),rep('F',times=naltF))
-      ageV=rep(0,times=n)
-      gene_momV=c(rep(1,times=altM),rep(1,times=altF),rep(0,times=naltM),rep(0,times=naltF))
-      gene_dadV=c(rep(1,times=altM),rep(1,times=altF),rep(0,times=naltM),rep(0,times=naltF))
-      visiblityV=rep(T,times=n)
-      aliveV=rep(T,times=n)
+      idV =c(1:n, rep(NA,litter*k))
+      sexV=c(rep('M',times=altM),rep('F',times=altF),rep('M',times=naltM),rep('F',times=naltF),rep(NA,litter*k))
+      ageV=c(rep(0,times=n),rep(NA,litter*k))
+      gene_momV=c(rep(1,times=altM),rep(1,times=altF),rep(0,times=naltM),rep(0,times=naltF),rep(NA, times=litter*k))
+      gene_dadV=c(rep(1,times=altM),rep(1,times=altF),rep(0,times=naltM),rep(0,times=naltF),rep(NA,times=litter*k))
+      visiblityV=c(rep(T,times=n),rep(NA,litter*k))
+      aliveV=c(rep(T,times=n),rep(NA,litter*k))
       
-      df <<- data.table(id = 1:n, sex=sexV, age=ageV, gene_mom=gene_momV, 
+      df <<- data.table(id = idV, sex=sexV, age=ageV, gene_mom=gene_momV, 
               gene_dad=gene_dadV,visiblity=visiblityV, alive=aliveV )
       
+      curId <<- n+1
+      pop <<- n
     },
-    shrinkData = function(df){
-      return(df[alive == T] )
+    shrinkData = function(){
+      dead = which(self$df$alive==F & !is.na(self$df$alive)) 
+      self$df[dead,] = NA
     },
     pickMates = function(){
       #k = carrying capacity
-      popsize=self$population()
-      
+      popsize=population()
+      print(popsize) 
       if(popsize >= self$k){
         #population is at carrying compacity
         return(NULL)
       }
       
-      vMales=self$dfSmall[self$dfSmall$sex == 'M' & self$dfSmall$age >= self$maturity,]
-      vFeMales=self$dfSmall[self$dfSmall$sex == 'F' & self$dfSmall$age >= self$maturity,]
+      vMales=self$df[self$df$sex == 'M' & self$df$age >= self$maturity & !is.na(self$df$age),]
+      vFeMales=self$df[self$df$sex == 'F' & self$df$age >= self$maturity & !is.na(self$df$age),]
       
       nf = ceiling((self$k-popsize)/self$litter)
       
@@ -59,6 +64,7 @@ Field <- R6Class(
       chosenF=sample(vFeMales$id,size=af, replace=F)
       chosenM=sample(vMales$id,size=af, replace=T)
       pairs=list(females=chosenF,males=chosenM)
+      
       return(pairs)
     },
     reproduce = function(x,y,size=self$litter){
@@ -77,29 +83,34 @@ Field <- R6Class(
        relMat[ ,n] <<- self$relMat[n, ]
        
        #Add new critter to data frame
-       self$storeDF(x,y,n)
+       self$storeDF(x,y,tdf=self$df)
      }
     },
-    storeDF = function(x,y,n){
-      geneM = sample(c(self$df$gene_mom[x],self$df$gene_dad[x]),1)
-      geneF = sample(c(self$df$gene_mom[y],self$df$gene_dad[y]),1)
+    storeDF = function(x,y,tdf){
+      geneM = sample(c(tdf$gene_mom[x],tdf$gene_dad[x]),1)
+      geneF = sample(c(tdf$gene_mom[y],tdf$gene_dad[y]),1)
       
-      temp=list(n,sample(c('M','F'),1) , 0, geneM, geneF, T, T)
+      temp=list(self$curId,sample(c('M','F'),1) , 0, geneM, geneF, T, T)
       
-      df <<- rbind(self$df,temp)
+      j<-which(is.na(tdf$id))[1]
+      tdf[j,]=temp
+      df <<- tdf
+      curId <<- self$curId+1
+      
     },
     getPops = function(df){
       #get populations at every time step 
       altPop  <<- c( self$altPop,nrow(df[df$gene_mom ==1 & df$gene_dad==1,]))
       naltPop <<- c( self$naltPop,nrow(df[df$gene_mom ==0 & df$gene_dad==0,]))
-      recPop  <<- c( self$recPop,nrow(df[dfSmall$gene_mom ==0 & df$gene_dad==1,])+
+      recPop  <<- c( self$recPop,nrow(df[df$gene_mom ==0 & df$gene_dad==1,])+
                        nrow(df[df$gene_mom ==1 & df$gene_dad==0,]))
     },
     population = function(){
-      return(nrow(self$dfSmall))
+      pop <<- nrow(self$df[self$df$alive ==T & !is.na(self$df$alive)])
+      return(pop)
     },
     stepUp = function(){
-      df$age[self$df$alive == T] <<- self$df$age[self$df$alive == T] + 1  
+      df$age[self$df$alive == T & !is.na(self$df$alive)] <<- self$df$age[self$df$alive == T & !is.na(self$df$alive)] + 1  
     },
     graphPops = function(){
       pdf = data.frame(NAlt_Pop = self$naltPop, Alt_Pop=self$altPop, Rec_Pop=self$recPop,steps = seq(1:length(self$altPop)) ) 
@@ -110,7 +121,7 @@ Field <- R6Class(
                
     },
     culling = function(age=3){
-      df$alive[self$df$age >= age] <<- F 
+      df$alive[self$df$age >= age & !is.na(self$df$age)] <<- F 
     }
   )
 )

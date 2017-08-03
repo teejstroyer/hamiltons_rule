@@ -1,24 +1,27 @@
 source("fieldClass.R")
 # Simulation
-fieldSim <- function(reps=100, k=NULL){
-  FieldTest <- Field$new(altM=10,altF=10,
-                         naltM=10,naltF=10,
-                         mature=0, k=k,
-                         litter=3)
+fieldSim <- function(reps=100, k=NULL,altM, altF, naltM,naltF, m, l){
+  
+  
+  FieldTest <- Field$new(altM=altM,altF=altF,
+                         naltM=naltM,naltF=naltF,
+                         mature=m, k=k,
+                         litter=l)
+  
   for(i in 1:reps){
     FieldTest$stepUp()
-    FieldTest$getPops(FieldTest$dfSmall)
-    FieldTest$dfSmall=FieldTest$shrinkData(FieldTest$df)
+    #FieldTest$getPops(FieldTest$df)
+    #FieldTest$df=FieldTest$shrinkData(FieldTest$df)
     #summary function
     
     #populations
     
     #Eagle Attack
-    FieldTest$eagleAttack()
+    #FieldTest$eagleAttack()
     
     #kill elderly
     FieldTest$culling()
-    FieldTest$dfSmall=FieldTest$shrinkData(FieldTest$df)
+    FieldTest$shrinkData()
     
     #Reproduction Phase
     pairs=FieldTest$pickMates()
@@ -27,7 +30,7 @@ fieldSim <- function(reps=100, k=NULL){
     }
   }
   
-  #View(FieldTest$df)
+  View(FieldTest$df)
   #print(FieldTest$relMat)
-  FieldTest$graphPops()
+  #FieldTest$graphPops()
 }
