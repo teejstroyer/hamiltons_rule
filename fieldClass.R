@@ -60,18 +60,22 @@ Field <- R6Class(
         return(NULL)
       }
       
-      vMales=self$df[self$df$sex == 'M' & self$df$age >= self$maturity & !is.na(self$df$age),]
-      vFeMales=self$df[self$df$sex == 'F' & self$df$age >= self$maturity & !is.na(self$df$age),]
+      vMales=self$df[!is.na(self$df$age)& self$df$sex == 'M' & self$df$age >= self$maturity & self$df$alive==T,]
+      vFeMales=self$df[!is.na(self$df$age) & self$df$sex == 'F' & self$df$age >= self$maturity & self$df$alive==T,]
       
       nf = ceiling((self$k-popsize)/self$litter)
       
       af=min(nf,length(vFeMales$id))
       
       chosenF=sample(vFeMales$id,size=af, replace=F)
+      
       chosenM=sample(vMales$id,size=af, replace=T)
       pairs=list(females=chosenF,males=chosenM)
       
-      return(pairs)
+      if(!is.null(chosenF)){
+        Map(self$reproduce, chosenF, chosenM,self$litter)
+      }
+      
     },
     reproduce = function(x,y,size=self$litter){
      for(i in 1:size){ 
@@ -89,12 +93,18 @@ Field <- R6Class(
     },
     storeDF = function(x,y,tdf){
       #sample from mothers genes to pass down childrens genes
-      geneM = sample(c(tdf$gene_mom[!is.na(tdf$id) & tdf$id==x],tdf$gene_dad[!is.na(tdf$id) & tdf$id==x]),1)
+      geneM = sample(c(tdf$gene_mom[!is.na(tdf$id) & tdf$id==y],tdf$gene_dad[!is.na(tdf$id) & tdf$id==y]),1)
       
       #sample from fathers genes to pass down childrens genes
-      geneF = sample(c(tdf$gene_mom[!is.na(tdf$id) & tdf$id==y],tdf$gene_dad[!is.na(tdf$id) & tdf$id==y]),1)
+      geneF = sample(c(tdf$gene_mom[!is.na(tdf$id) & tdf$id==x],tdf$gene_dad[!is.na(tdf$id) & tdf$id==x]),1)
       
-      temp=list(self$curId,sample(c('M','F'),1),0,geneM,geneF,T,T,tdf$posX[y],tdf$posY[y])
+      
+      pY <- tdf$posY[x]
+      pX <- tdf$posX[x]
+      
+      cat(pX, " , ", pY, "\n")
+      
+      temp=list(self$curId,sample(c('M','F'),1),0,geneM,geneF,T,T,pX,pY)
       
       j<-which(is.na(tdf$id))[1]
       tdf[j,]=temp

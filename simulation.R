@@ -10,12 +10,12 @@ fieldSim <- function(reps=100, k=NULL,aM, aF, nM,nF, m, l){
                          xDim=200, yDim=200)
   
   for(i in 1:reps){
+    FieldTest$shrinkData()
     FieldTest$stepUp()
     FieldTest$move(5)
     
-    
     #populations
-    cat("Population: ", FieldTest$population(),"\n")
+    #cat("Population: ", FieldTest$population(),"\n")
     FieldTest$getPops(FieldTest$df)
     
     #Eagle Attack
@@ -26,11 +26,8 @@ fieldSim <- function(reps=100, k=NULL,aM, aF, nM,nF, m, l){
     
     #Reproduction Phase
     pairs=FieldTest$pickMates()
-    if(!is.null(pairs)){
-      Map(FieldTest$reproduce,x=pairs$females,y=pairs$male)
-    }
+    
     #print(object.size(FieldTest$relMat))
-    FieldTest$shrinkData()
   }
   
   View(FieldTest$df)
