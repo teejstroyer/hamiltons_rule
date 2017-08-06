@@ -10,33 +10,29 @@ fieldSim <- function(reps=100, k=NULL,aM, aF, nM,nF, m, l){
                          xDim=200, yDim=200)
   
   for(i in 1:reps){
-    FieldTest$shrinkData()
     FieldTest$stepUp()
     FieldTest$move(5)
     
-    #populations
-    #cat("Population: ", FieldTest$population(),"\n")
-    FieldTest$getPops(FieldTest$df)
+    #TODO:
+      #Eagle Attack
+      #FieldTest$eagleAttack()
     
-    #Eagle Attack
-    #FieldTest$eagleAttack()
-    
+    FieldTest$culling()
     #kill elderly
     FieldTest$culling()
+    FieldTest$shrinkData()
     
     #Reproduction Phase
     pairs=FieldTest$pickMates()
     
-    #print(object.size(FieldTest$relMat))
+    FieldTest$shrinkData()
+    #populations
+    cat("Population: ", FieldTest$population(),"\n")
   }
   
   View(FieldTest$df)
   #print(FieldTest$relMat)
   FieldTest$graphPops()
-  #print(FieldTest$altPop)
-  #print(FieldTest$naltPop)
-  #print(FieldTest$recPop)
-  #return(FieldTest$curId)
 }
 
 fieldSim(5,25,2,2,2,2,1,3)

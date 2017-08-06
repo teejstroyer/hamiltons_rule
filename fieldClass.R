@@ -64,23 +64,20 @@ Field <- R6Class(
       vFeMales=self$df[!is.na(self$df$age) & self$df$sex == 'F' & self$df$age >= self$maturity & self$df$alive==T,]
       
       nf = ceiling((self$k-popsize)/self$litter)
-      
       af=min(nf,length(vFeMales$id))
       
       chosenF=sample(vFeMales$id,size=af, replace=F)
-      
       chosenM=sample(vMales$id,size=af, replace=T)
+      
       pairs=list(females=chosenF,males=chosenM)
       
       if(!is.null(chosenF)){
         Map(self$reproduce, chosenF, chosenM,self$litter)
       }
-      
     },
     reproduce = function(x,y,size=self$litter){
      for(i in 1:size){ 
        n = self$curId
-       
        #Create Child Row
        #relMat[n,1:(n-1)] <<- ( self$relMat[x,1:(n-1) ] + self$relMat[y,1:(n-1)])/2 
       
@@ -98,11 +95,8 @@ Field <- R6Class(
       #sample from fathers genes to pass down childrens genes
       geneF = sample(c(tdf$gene_mom[!is.na(tdf$id) & tdf$id==x],tdf$gene_dad[!is.na(tdf$id) & tdf$id==x]),1)
       
-      
-      pY <- tdf$posY[x]
-      pX <- tdf$posX[x]
-      
-      cat(pX, " , ", pY, "\n")
+      pY <- tdf$posY[!is.na(tdf$id) & tdf$id==x]
+      pX <- tdf$posX[!is.na(tdf$id) & tdf$id==x]
       
       temp=list(self$curId,sample(c('M','F'),1),0,geneM,geneF,T,T,pX,pY)
       
@@ -113,10 +107,10 @@ Field <- R6Class(
     },
     getPops = function(df){
       #get populations at every time step 
-      altPop  <<- c( self$altPop,nrow(df[df$gene_mom ==1 & df$gene_dad==1,]))
-      naltPop <<- c( self$naltPop,nrow(df[df$gene_mom ==0 & df$gene_dad==0,]))
-      recPop  <<- c( self$recPop,nrow(df[df$gene_mom ==0 & df$gene_dad==1,])+
-                       nrow(df[df$gene_mom ==1 & df$gene_dad==0,]))
+      altPop  <<- c( self$altPop,nrow(df[!is.na(df$id) & df$gene_mom ==1 & df$gene_dad==1,]))
+      naltPop <<- c( self$naltPop,nrow(df[!is.na(df$id) & df$gene_mom ==0 & df$gene_dad==0,]))
+      recPop  <<- c( self$recPop,nrow(df[!is.na(df$id) & df$gene_mom ==0 & df$gene_dad==1,])+
+                       nrow(df[!is.na(df$id) & df$gene_mom ==1 & df$gene_dad==0,]))
     },
     population = function(){
       pop <<- nrow(self$df[self$df$alive ==T & !is.na(self$df$alive)])
@@ -124,9 +118,10 @@ Field <- R6Class(
     },
     stepUp = function(){
       df$age[self$df$alive == T & !is.na(self$df$alive)] <<- self$df$age[self$df$alive == T & !is.na(self$df$alive)] + 1  
+      getPops(self$df)
     },
     graphPops = function(){
-      pdf = data.frame(NAlt_Pop = self$naltPop, Alt_Pop=self$altPop, Rec_Pop=self$recPop,steps = seq(1:length(self$altPop)) ) 
+      pdf = data.frame(NAlt_Pop = self$naltPop, Alt_Pop=self$altPop, Rec_Pop=self$recPop, steps = seq(1:length(self$altPop))) 
       
       pdf_long <- melt(pdf, id="steps")  # convert to long format
       #print(pdf_long)
